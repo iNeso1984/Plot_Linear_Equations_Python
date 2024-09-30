@@ -50,34 +50,24 @@ def plot_lines(eq1_form, a1, b1, c1, eq2_form, a2, b2, c2, m1, m2):
     plt.xticks(np.arange(-20, 21, 2))  # x ticks from -20 to 20 with a step of 2
     plt.yticks(np.arange(-20, 21, 2))  # y ticks from -20 to 20 with a step of 2
 
-    # Set the aspect ratio to be equal
+    # Set the aspect ratio to be equal for perfect square grid
     plt.axis('equal')  # This will make the grid squares
 
     # Show the plot
     st.pyplot(plt)
 
-    return equation1, equation2
+    return equation1, equation2, x_vals, y1, y2
 
 
-def save_plot_as_pdf(equation1, equation2):
-    # Use a BytesIO stream to save the PDF in memory
-    from io import BytesIO
-    buf = BytesIO()
-    with PdfPages(buf) as pdf:
-        plt.figure(figsize=(10, 5))
-        x_vals = np.linspace(-10, 10, 100)
+def save_plot_as_pdf(equation1, equation2, x_vals, y1, y2):
+    # Define the filename and path where you want to save the PDF
+    pdf_filename = 'line_graph_results.pdf'
+    
+    try:
+        # Create a new figure for the PDF to match the appearance
+        plt.figure(figsize=(10, 10))
 
-        # Recreate the plot for saving
-        # Here we need to recreate y1 and y2 using sympy
-        y1_expr = sp.sympify(equation1.replace('y =', ''))
-        y2_expr = sp.sympify(equation2.replace('y =', ''))
-
-        y1_func = sp.lambdify('x', y1_expr)
-        y2_func = sp.lambdify('x', y2_expr)
-
-        y1 = y1_func(x_vals)
-        y2 = y2_func(x_vals)
-
+        # Use the provided data for plotting
         plt.plot(x_vals, y1, label=f'Equation 1: {equation1}', color='blue')
         plt.plot(x_vals, y2, label=f'Equation 2: {equation2}', color='red')
         plt.axhline(0, color='black', lw=0.5, ls='--')
@@ -89,17 +79,34 @@ def save_plot_as_pdf(equation1, equation2):
         plt.legend()
         plt.tight_layout()
 
-        # Save the current plot to the PDF
-        pdf.savefig()
-        plt.close()
+        # Set the tick marks for both axes
+        plt.xticks(np.arange(-20, 21, 2))  # x ticks from -20 to 20 with a step of 2
+        plt.yticks(np.arange(-20, 21, 2))  # y ticks from -20 to 20 with a step of 2
 
-    # Return the PDF data
-    buf.seek(0)  # Reset the buffer to the beginning
-    return buf
+        # Set the aspect ratio to be equal for perfect square grid
+        plt.axis('equal')  # This will make the grid squares
+
+        with PdfPages(pdf_filename) as pdf:
+            # Save the current plot to the PDF
+            pdf.savefig()  
+            plt.close()
+        
+        # Inform the user where the file was saved
+        st.success(f"Plot saved as '{pdf_filename}' in the current directory!")
+
+    except Exception as e:
+        st.error(f"Error generating PDF: {e}")  # Display error message in Streamlit
 
 
 def main():
     st.title('Line Graph Generator')
+    st.markdown("""
+    **Instructions:**
+    1. Select the form of the equations you want to plot (Standard or Slope-Intercept).
+    2. Enter the coefficients for both equations.
+    3. Click the "Plot" button to generate the graph.
+    4. The graph will be saved as a PDF file in the current directory.
+    """)
 
     # User input for equation 1
     st.header('Equation 1')
@@ -127,15 +134,13 @@ def main():
 
     # Plot the lines when the "Plot" button is clicked
     if st.button('Plot'):
-        equation1, equation2 = plot_lines(eq1_form, a1, b1, c1, eq2_form, a2, b2, c2, m1 if m1 is not None else 0, m2 if m2 is not None else 0)
+        equation1, equation2, x_vals, y1, y2 = plot_lines(eq1_form, a1, b1, c1, eq2_form, a2, b2, c2, m1 if m1 is not None else 0, m2 if m2 is not None else 0)
         st.markdown(f'**Equation 1:** {equation1}')
         st.markdown(f'**Equation 2:** {equation2}')
+        
+        # Save the plot as PDF directly
+        save_plot_as_pdf(equation1, equation2, x_vals, y1, y2)
 
-        # Button to save the plot as PDF
-        if st.button('Save as PDF'):
-            pdf_data = save_plot_as_pdf(equation1, equation2)
-            st.download_button("Download PDF", pdf_data, "line_graph_results.pdf", "application/pdf")
-            st.success("Plot saved as 'line_graph_results.pdf'!")
 
 if __name__ == '__main__':
     main()
